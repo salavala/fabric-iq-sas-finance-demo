@@ -233,6 +233,211 @@ Expected highlights include:
 - **Tailspin Energy:** softening usage with rising cost pressure.
 - **Northstar Bank and Blue Yonder Airlines:** strong expansion candidates.
 
+## Step-by-step demo execution
+
+Use this 15-20 minute flow for a live customer presentation. Complete the
+pre-demo checks before the audience joins.
+
+### 1. Prepare the environment
+
+1. Open the target workspace in
+   [Microsoft Fabric](https://app.fabric.microsoft.com/).
+2. Confirm that the workspace is assigned to active **F64 or higher** capacity.
+3. Confirm that these items are present:
+   - `SASFinanceLakehouse`
+   - `Load SAS Finance Demo`
+   - `SAS_Finance_Customer_Intelligence`
+   - `SAS Finance Intelligence Agent`
+4. Open the notebook run history and confirm the most recent run completed.
+5. Open `SASFinanceLakehouse` and confirm that all ten tables are visible.
+6. Open the Ontology item. If Fabric indicates that its graph data is stale,
+   select **Refresh graph model** or save the model, and wait for refresh to
+   complete.
+7. Open the Data Agent and confirm that it is published and that
+   `SASFinanceLakehouse` is its selected data source.
+
+If an item or table is missing, rerun the idempotent deployment:
+
+```powershell
+python .\deploy.py `
+  --workspace-id <workspace-id> `
+  --workspace-name "<workspace-display-name>"
+```
+
+### 2. Introduce the business problem
+
+Set the scene:
+
+> A SAS analytics company wants one governed view of customer value and renewal
+> risk. Finance sees invoices and margin, Customer Success sees adoption and
+> support, and Sales sees renewal forecasts. Fabric IQ connects those signals
+> so people and AI agents reason from the same business context.
+
+Show the architecture diagram in this README and explain the progression:
+
+1. Synthetic source data lands in OneLake.
+2. A Fabric notebook creates managed Delta tables.
+3. Ontology adds business entities and relationships.
+4. Data Agent translates natural-language questions into governed analytical
+   queries.
+5. Foundry can orchestrate the Ontology and Data Agent through MCP.
+
+### 3. Prove the financial reconciliation
+
+1. Open the SQL analytics endpoint associated with `SASFinanceLakehouse`.
+2. Create a new SQL query.
+3. Run:
+
+```sql
+SELECT
+    SUM(billed_revenue_6m) AS billed_revenue_6m,
+    SUM(cash_collected_6m) AS cash_collected_6m,
+    SUM(ar_outstanding) AS ar_outstanding,
+    SUM(CASE
+        WHEN renewal_probability < 0.60 THEN arr
+        ELSE 0
+    END) AS at_risk_arr
+FROM dbo.customer_finance_summary;
+```
+
+Verify these anchors:
+
+| Metric | Expected value |
+|---|---:|
+| Billed revenue | $2,214,000 |
+| Cash collected | $2,047,500 |
+| Accounts receivable | $166,500 |
+| At-risk ARR | $948,000 |
+
+Explain that the summary is reconciled from invoice, payment, cost, usage,
+support, and forecast records rather than being an isolated dashboard metric.
+
+### 4. Find the customers that require intervention
+
+Run:
+
+```sql
+SELECT
+    customer_name,
+    arr,
+    renewal_date,
+    renewal_probability,
+    usage_trend_pct,
+    open_critical_cases,
+    overdue_ar,
+    risk_reason,
+    recommended_action
+FROM dbo.customer_finance_summary
+WHERE renewal_probability < 0.60
+ORDER BY renewal_probability;
+```
+
+The query should identify:
+
+| Customer | Renewal probability | Primary signal |
+|---|---:|---|
+| Alpine Insurance | 35% | Usage decline, critical support issue, and overdue AR |
+| Contoso Health | 48% | Usage decline and open critical support case |
+| Lucerne Publishing | 58% | Four consecutive months of declining usage |
+
+Point out that these three customers account for the full **$948,000 at-risk
+ARR**.
+
+### 5. Explore the Ontology
+
+1. Open `SAS_Finance_Customer_Intelligence`.
+2. On the model canvas, select the `Customer` entity.
+3. Show its relationships to `Subscription`, `Invoice`, `SupportCase`, and
+   `CustomerFinanceProfile`.
+4. Follow `Subscription` to `Product`, `UsageMetric`, `CostAllocation`, and
+   `RenewalForecast`.
+5. Open an Alpine Insurance or Contoso Health instance.
+6. Explain that the entity key bindings connect records across operational and
+   financial tables without duplicating business logic in every agent prompt.
+
+Use the Ontology natural-language experience, if enabled, to ask:
+
+```text
+Show the business context for Alpine Insurance, including its subscription,
+invoices, support cases, usage, renewal forecast, and finance profile.
+```
+
+The response should connect the customer to its related records instead of
+returning an unstructured keyword search.
+
+### 6. Run the Data Agent conversation
+
+Open `SAS Finance Intelligence Agent` and start a new conversation.
+
+Ask each prompt separately:
+
+1. ```text
+   Which customers are at risk of renewal, and why?
+   ```
+   Confirm that Alpine Insurance, Contoso Health, and Lucerne Publishing are
+   returned with probabilities and observed risk drivers.
+
+2. ```text
+   Which customers have declining usage and open critical support cases?
+   ```
+   Confirm that Contoso Health and Alpine Insurance are highlighted.
+
+3. ```text
+   Which overdue invoices are associated with at-risk renewals?
+   ```
+   Confirm that the answer links invoice status to customer and renewal
+   context, rather than listing invoices alone.
+
+4. ```text
+   Rank customers by gross margin percentage and explain the bottom three.
+   ```
+   Confirm that the answer uses billed revenue and allocated cloud/support
+   costs.
+
+5. ```text
+   Recommend the next finance and customer-success action for every at-risk
+   customer. Include ARR, renewal probability, usage trend, support risk, and
+   overdue receivables.
+   ```
+   Confirm that recommendations cite the underlying signals and do not invent
+   values.
+
+Remind the audience that the Data Agent instructions define ARR, margin,
+renewal-risk thresholds, overdue AR, and declining adoption so those meanings
+remain consistent across questions.
+
+### 7. Demonstrate the Foundry handoff
+
+If a Microsoft Foundry project and model are configured:
+
+1. Open the Foundry agent connected to the Fabric IQ MCP endpoints.
+2. Ask:
+
+   ```text
+   Prepare an executive renewal-risk briefing. Use the ontology to explain the
+   related customer context and the Data Agent to quantify the financial and
+   operational evidence. Recommend the next action for each at-risk account.
+   ```
+
+3. Confirm that the response combines relationship reasoning with governed
+   metrics.
+4. Show that Fabric permissions continue to govern source access.
+
+If Foundry is not configured, show the two endpoint patterns in the deployment
+output and explain that they allow Foundry, Copilot Studio, or another
+MCP-compatible client to reuse the same governed Fabric intelligence.
+
+### 8. Close with business value
+
+Conclude with three outcomes:
+
+1. **Faster decisions:** Finance, Sales, and Customer Success see the same
+   renewal and profitability signals.
+2. **Explainable AI:** Every recommendation is grounded in modeled entities,
+   relationships, and governed metrics.
+3. **Reusable intelligence:** The same Ontology and Data Agent can support
+   Fabric experiences, Foundry agents, Copilot Studio, and custom MCP clients.
+
 ## Connect to Microsoft Foundry
 
 After deploying a Foundry project and model, add the Fabric IQ knowledge source
