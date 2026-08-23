@@ -1,0 +1,19 @@
+{
+  "as_of_date": "2026-08-31",
+  "table_rows": {
+    "customers": 12,
+    "products": 4,
+    "subscriptions": 12,
+    "invoices": 72,
+    "payments": 67,
+    "usage_monthly": 72,
+    "support_cases": 9,
+    "cloud_costs": 72,
+    "renewal_forecasts": 12,
+    "customer_finance_summary": 12
+  },
+  "billed_revenue_6m": 2214000.0,
+  "cash_collected_6m": 2047500.0,
+  "ar_outstanding": 166500.0,
+  "at_risk_arr": 948000.0
+}

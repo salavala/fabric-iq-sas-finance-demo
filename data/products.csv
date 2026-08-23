@@ -1,0 +1,5 @@
+product_id,product_name,product_family,list_price_arr
+P001,SAS Viya Cloud,Analytics Platform,180000.0
+P002,SAS Risk Modeling,Risk Analytics,240000.0
+P003,SAS Customer Intelligence,Customer Analytics,150000.0
+P004,SAS Fraud Detection,Fraud Analytics,210000.0

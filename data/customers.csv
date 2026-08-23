@@ -1,0 +1,13 @@
+customer_id,customer_name,industry,country,segment,account_owner
+C001,Northstar Bank,Financial Services,United States,Enterprise,Avery Chen
+C002,Contoso Health,Healthcare,United States,Enterprise,Maya Patel
+C003,Fabrikam Retail,Retail,Canada,Enterprise,Noah Williams
+C004,Alpine Insurance,Insurance,United Kingdom,Enterprise,Sophia Martin
+C005,Blue Yonder Airlines,Travel,United States,Strategic,Liam Johnson
+C006,Adventure Works,Manufacturing,Germany,Commercial,Emma Garcia
+C007,Tailspin Energy,Energy,United States,Strategic,Ethan Brown
+C008,Wide World Importers,Distribution,Netherlands,Commercial,Olivia Davis
+C009,Proseware Telecom,Telecommunications,Australia,Enterprise,Lucas Wilson
+C010,Woodgrove Public Sector,Public Sector,United States,Enterprise,Isabella Moore
+C011,Fourth Coffee,Consumer Goods,France,Commercial,James Taylor
+C012,Lucerne Publishing,Media,Switzerland,Commercial,Amelia Anderson

@@ -1,0 +1,13 @@
+profile_id,customer_id,customer_name,arr,mrr,billed_revenue_6m,cash_collected_6m,ar_outstanding,overdue_ar,cost_6m,gross_margin_pct,latest_adoption_rate,usage_trend_pct,open_critical_cases,renewal_date,renewal_probability,renewal_category,risk_reason,recommended_action
+FP-C001,C001,Northstar Bank,480000.0,40000.0,240000.0,240000.0,0,0,92223.0,61.57,0.91,12.35,0,2026-09-30,0.91,Expansion,Strong adoption and executive sponsorship,Prepare 10% analytics expansion proposal
+FP-C002,C002,Contoso Health,360000.0,30000.0,180000.0,150000.0,30000.0,30000.0,75054.96,58.3,0.54,-31.65,1,2026-11-14,0.48,At Risk,Usage declined 32% and two critical cases remain open,Run executive value review and recovery plan
+FP-C003,C003,Fabrikam Retail,300000.0,25000.0,150000.0,150000.0,0,0,73929.1,50.71,0.82,32.26,0,2026-12-31,0.86,Likely,Usage and active users are growing,Propose customer intelligence add-on
+FP-C004,C004,Alpine Insurance,420000.0,35000.0,210000.0,175000.0,35000.0,35000.0,77584.5,63.06,0.44,-40.54,1,2026-09-14,0.35,At Risk,Usage declined 41% near renewal and invoice is overdue,Escalate support resolution and commercial intervention
+FP-C005,C005,Blue Yonder Airlines,720000.0,60000.0,360000.0,360000.0,0,0,169265.88,52.98,0.95,7.95,0,2026-11-30,0.96,Expansion,High adoption with increasing workloads,Offer reserved capacity and platform expansion
+FP-C006,C006,Adventure Works,216000.0,18000.0,108000.0,108000.0,0,0,48011.74,55.54,0.71,22.41,0,2027-01-31,0.79,Likely,Healthy adoption trajectory,Continue enablement and identify risk use case
+FP-C007,C007,Tailspin Energy,600000.0,50000.0,300000.0,250000.0,50000.0,0,121075.0,59.64,0.69,-19.77,0,2026-10-14,0.62,Watch,Compute cost rising while usage softens,Complete architecture and margin optimization review
+FP-C008,C008,Wide World Importers,180000.0,15000.0,90000.0,90000.0,0,0,42850.44,52.39,0.76,58.33,0,2027-02-28,0.84,Likely,Rapid adoption after onboarding,Introduce advanced customer analytics package
+FP-C009,C009,Proseware Telecom,450000.0,37500.0,225000.0,187500.0,37500.0,0,108753.24,51.67,0.74,-10.84,0,2026-10-31,0.76,Likely,Stable adoption with one aging support case,Close support action before renewal
+FP-C010,C010,Woodgrove Public Sector,390000.0,32500.0,195000.0,195000.0,0,0,82519.5,57.68,0.81,20.9,0,2027-01-14,0.9,Likely,Strong usage and payment history,Start public-sector renewal process early
+FP-C011,C011,Fourth Coffee,144000.0,12000.0,72000.0,72000.0,0,0,35000.1,51.39,0.7,27.27,0,2027-03-31,0.74,Likely,Moderate but improving adoption,Deliver role-based enablement session
+FP-C012,C012,Lucerne Publishing,168000.0,14000.0,84000.0,70000.0,14000.0,0,46574.28,44.55,0.57,-20.83,0,2027-02-14,0.58,Watch,Usage declined for four consecutive months,Schedule adoption workshop and success plan

@@ -1,0 +1,10 @@
+case_id,customer_id,subscription_id,severity,status,case_title,opened_date,resolved_date,support_hours
+CASE001,C002,S002,Critical,Open,Model scoring latency,2026-08-08,,31.0
+CASE002,C002,S002,High,Open,Identity synchronization failures,2026-08-18,,17.0
+CASE003,C004,S004,Critical,Open,Fraud rules missing events,2026-08-05,,38.0
+CASE004,C004,S004,Medium,Resolved,Dashboard refresh delay,2026-07-02,2026-07-07,6.0
+CASE005,C007,S007,High,Open,Compute queue saturation,2026-08-21,,14.0
+CASE006,C009,S009,Medium,Open,Alert configuration guidance,2026-07-27,,8.0
+CASE007,C001,S001,Low,Resolved,New user onboarding,2026-06-10,2026-06-11,2.0
+CASE008,C005,S005,Medium,Resolved,Capacity planning,2026-08-02,2026-08-04,4.0
+CASE009,C012,S012,High,Open,Batch migration failures,2026-08-14,,20.0

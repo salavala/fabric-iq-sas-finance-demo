@@ -1,0 +1,13 @@
+forecast_id,subscription_id,customer_id,renewal_date,renewal_arr,renewal_probability,forecast_category,risk_reason,recommended_action
+RF-S001,S001,C001,2026-09-30,480000.0,0.91,Expansion,Strong adoption and executive sponsorship,Prepare 10% analytics expansion proposal
+RF-S002,S002,C002,2026-11-14,360000.0,0.48,At Risk,Usage declined 32% and two critical cases remain open,Run executive value review and recovery plan
+RF-S003,S003,C003,2026-12-31,300000.0,0.86,Likely,Usage and active users are growing,Propose customer intelligence add-on
+RF-S004,S004,C004,2026-09-14,420000.0,0.35,At Risk,Usage declined 41% near renewal and invoice is overdue,Escalate support resolution and commercial intervention
+RF-S005,S005,C005,2026-11-30,720000.0,0.96,Expansion,High adoption with increasing workloads,Offer reserved capacity and platform expansion
+RF-S006,S006,C006,2027-01-31,216000.0,0.79,Likely,Healthy adoption trajectory,Continue enablement and identify risk use case
+RF-S007,S007,C007,2026-10-14,600000.0,0.62,Watch,Compute cost rising while usage softens,Complete architecture and margin optimization review
+RF-S008,S008,C008,2027-02-28,180000.0,0.84,Likely,Rapid adoption after onboarding,Introduce advanced customer analytics package
+RF-S009,S009,C009,2026-10-31,450000.0,0.76,Likely,Stable adoption with one aging support case,Close support action before renewal
+RF-S010,S010,C010,2027-01-14,390000.0,0.9,Likely,Strong usage and payment history,Start public-sector renewal process early
+RF-S011,S011,C011,2027-03-31,144000.0,0.74,Likely,Moderate but improving adoption,Deliver role-based enablement session
+RF-S012,S012,C012,2027-02-14,168000.0,0.58,Watch,Usage declined for four consecutive months,Schedule adoption workshop and success plan
