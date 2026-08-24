@@ -183,12 +183,26 @@ The deployment performs these steps:
 5. Runs the notebook to materialize ten managed Delta tables.
 6. Validates a Delta transaction log for every table.
 7. Creates or updates `SAS_Finance_Customer_Intelligence`.
-8. Creates or updates the published `SAS Finance Intelligence Agent`.
-9. Writes local `deployment-state.json` with item IDs and MCP endpoints.
+8. Waits for the companion Ontology graph refresh and retries publication if
+   Fabric encounters its preview refresh race.
+9. Creates or updates the published `SAS Finance Intelligence Agent`, attaching
+   both the Ontology and Lakehouse as governed sources.
+10. Writes local `deployment-state.json` with item IDs, graph refresh status,
+    and MCP endpoints.
 
 The script is idempotent: running it again updates matching items instead of
 creating duplicates. `deployment-state.json` and generated tenant-bound
 definitions are intentionally ignored by Git.
+
+To update only the Ontology, graph model, and Data Agent after changing semantic
+definitions or instructions, skip data upload and notebook execution:
+
+```powershell
+python .\deploy.py `
+  --workspace-id <workspace-id> `
+  --workspace-name "<workspace-display-name>" `
+  --semantic-only
+```
 
 ### 4. Validate in Fabric
 
@@ -198,7 +212,9 @@ Open the target workspace and confirm:
 - `Load SAS Finance Demo` shows a completed run.
 - `SAS_Finance_Customer_Intelligence` contains ten entities and nine
   relationships.
-- `SAS Finance Intelligence Agent` is published.
+- The Ontology graph model reports a completed refresh.
+- `SAS Finance Intelligence Agent` is published with
+  `SAS_Finance_Customer_Intelligence` and `SASFinanceLakehouse` selected.
 
 The script also reports row counts, financial reconciliation, Delta validation,
 and these MCP endpoint patterns:
@@ -250,11 +266,9 @@ pre-demo checks before the audience joins.
    - `SAS Finance Intelligence Agent`
 4. Open the notebook run history and confirm the most recent run completed.
 5. Open `SASFinanceLakehouse` and confirm that all ten tables are visible.
-6. Open the Ontology item. If Fabric indicates that its graph data is stale,
-   select **Refresh graph model** or save the model, and wait for refresh to
-   complete.
-7. Open the Data Agent and confirm that it is published and that
-   `SASFinanceLakehouse` is its selected data source.
+6. Open the Ontology item and confirm that its graph data is current.
+7. Open the Data Agent and confirm that it is published with both
+   `SAS_Finance_Customer_Intelligence` and `SASFinanceLakehouse` selected.
 
 If an item or table is missing, rerun the idempotent deployment:
 
@@ -263,6 +277,9 @@ python .\deploy.py `
   --workspace-id <workspace-id> `
   --workspace-name "<workspace-display-name>"
 ```
+
+If only the graph or semantic sources need repair, add `--semantic-only`. The
+command fails clearly if the companion GraphModel cannot reach `Completed`.
 
 ### 2. Introduce the business problem
 
@@ -355,7 +372,7 @@ ARR**.
 6. Explain that the entity key bindings connect records across operational and
    financial tables without duplicating business logic in every agent prompt.
 
-Use the Ontology natural-language experience, if enabled, to ask:
+Use the enabled Ontology natural-language experience to ask:
 
 ```text
 Show the business context for Alpine Insurance, including its subscription,
@@ -364,6 +381,16 @@ invoices, support cases, usage, renewal forecast, and finance profile.
 
 The response should connect the customer to its related records instead of
 returning an unstructured keyword search.
+
+Then ask a quantitative ontology-grounded question:
+
+```text
+Which customers have a renewal probability below 0.60, and what is each risk
+reason?
+```
+
+Confirm that Alpine Insurance, Contoso Health, and Lucerne Publishing are
+returned from the modeled `CustomerFinanceProfile` entities.
 
 ### 6. Run the Data Agent conversation
 

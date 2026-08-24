@@ -16,6 +16,8 @@ from deploy import notebook_definition  # noqa: E402
 
 WORKSPACE_ID = "11111111-1111-1111-1111-111111111111"
 LAKEHOUSE_ID = "22222222-2222-2222-2222-222222222222"
+ONTOLOGY_ID = "33333333-3333-3333-3333-333333333333"
+ONTOLOGY_NAME = "SAS_Finance_Customer_Intelligence"
 
 
 class FabricAssetTests(unittest.TestCase):
@@ -51,9 +53,16 @@ class FabricAssetTests(unittest.TestCase):
             source = binding["dataBindingConfiguration"]["sourceTableProperties"]
             self.assertEqual(source["workspaceId"], WORKSPACE_ID)
             self.assertEqual(source["itemId"], LAKEHOUSE_ID)
+            self.assertNotIn("sourceSchema", source)
 
     def test_data_agent_contains_draft_and_published_configuration(self) -> None:
-        data_agent = build_data_agent(WORKSPACE_ID, LAKEHOUSE_ID, "SASFinanceLakehouse")
+        data_agent = build_data_agent(
+            WORKSPACE_ID,
+            LAKEHOUSE_ID,
+            "SASFinanceLakehouse",
+            ONTOLOGY_ID,
+            ONTOLOGY_NAME,
+        )
         paths = {part["path"] for part in data_agent["parts"]}
 
         self.assertIn("Files/Config/draft/stage_config.json", paths)
@@ -66,6 +75,20 @@ class FabricAssetTests(unittest.TestCase):
         )
         self.assertEqual(datasource["artifactId"], LAKEHOUSE_ID)
         self.assertEqual(len(datasource["elements"][0]["children"]), 10)
+        ontology_datasource = next(
+            part["content"]
+            for part in data_agent["parts"]
+            if part["path"].endswith(
+                f"/draft/ontology-{ONTOLOGY_NAME}/datasource.json"
+            )
+        )
+        self.assertEqual(ontology_datasource["artifactId"], ONTOLOGY_ID)
+        self.assertEqual(ontology_datasource["type"], "ontology")
+        self.assertEqual(len(ontology_datasource["elements"]), 10)
+        self.assertIn(
+            "Support group by in GQL",
+            ontology_datasource["dataSourceInstructions"],
+        )
 
     def test_notebook_persists_default_lakehouse(self) -> None:
         definition = notebook_definition(

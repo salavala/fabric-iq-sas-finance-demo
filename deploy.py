@@ -12,7 +12,12 @@ from urllib.parse import quote
 
 import requests
 
-from build_assets import build_data_agent, build_ontology, write_asset_tree
+from build_assets import (
+    ENTITY_NAMES,
+    build_data_agent,
+    build_ontology,
+    write_asset_tree,
+)
 from generate_data import TABLE_FIELDS, write_tables
 
 
@@ -271,6 +276,80 @@ class FabricClient:
             raise RuntimeError(f"Delta table {table_name!r} has no transaction log in OneLake.")
         return len(paths)
 
+    def _latest_item_job(self, item_id: str) -> dict[str, Any] | None:
+        response = self.fabric.get(
+            f"{FABRIC_API}/workspaces/{self.workspace_id}/items/{item_id}/jobs/instances"
+        )
+        self._raise(response)
+        jobs = response.json().get("value", [])
+        return max(jobs, key=lambda job: job.get("startTimeUtc", "")) if jobs else None
+
+    def _find_ontology_graph(self, ontology_id: str) -> dict[str, Any] | None:
+        suffix = ontology_id.replace("-", "")
+        return next(
+            (
+                item
+                for item in self.list_items("GraphModel")
+                if item.get("displayName", "").endswith(f"_graph_{suffix}")
+            ),
+            None,
+        )
+
+    def wait_for_ontology_graph(
+        self,
+        ontology_id: str,
+        ontology_definition: dict[str, Any],
+        max_attempts: int = 3,
+    ) -> dict[str, Any]:
+        deadline = time.monotonic() + 120
+        graph = self._find_ontology_graph(ontology_id)
+        while not graph and time.monotonic() < deadline:
+            time.sleep(10)
+            graph = self._find_ontology_graph(ontology_id)
+        if not graph:
+            raise RuntimeError("Fabric did not create the Ontology GraphModel item.")
+
+        previous_job_id = None
+        for attempt in range(1, max_attempts + 1):
+            job_deadline = time.monotonic() + 120
+            job = self._latest_item_job(graph["id"])
+            while (
+                (not job or job.get("id") == previous_job_id)
+                and time.monotonic() < job_deadline
+            ):
+                time.sleep(10)
+                job = self._latest_item_job(graph["id"])
+
+            refresh_deadline = time.monotonic() + 600
+            while (
+                job
+                and job.get("status") not in TERMINAL_JOB_STATES
+                and time.monotonic() < refresh_deadline
+            ):
+                time.sleep(15)
+                job = self._latest_item_job(graph["id"])
+
+            if job and job.get("status") == "Completed":
+                return {"graph_model": graph, "refresh_job": job}
+            if attempt == max_attempts:
+                raise RuntimeError(
+                    "Ontology graph refresh did not complete: "
+                    f"{json.dumps(job, indent=2)}"
+                )
+
+            previous_job_id = job.get("id") if job else previous_job_id
+            time.sleep(30)
+            response = self.fabric.post(
+                (
+                    f"{FABRIC_API}/workspaces/{self.workspace_id}/items/"
+                    f"{ontology_id}/updateDefinition"
+                ),
+                json={"definition": ontology_definition},
+            )
+            self._poll_operation(response)
+
+        raise RuntimeError("Ontology graph refresh exhausted all attempts.")
+
 
 def notebook_definition(
     source_path: Path,
@@ -334,6 +413,14 @@ def main() -> None:
     parser.add_argument("--ontology-name", default="SAS_Finance_Customer_Intelligence")
     parser.add_argument("--data-agent-name", default="SAS Finance Intelligence Agent")
     parser.add_argument("--skip-notebook-run", action="store_true")
+    parser.add_argument(
+        "--semantic-only",
+        action="store_true",
+        help=(
+            "Update only the Ontology and ontology-grounded Data Agent by "
+            "reusing the existing Lakehouse."
+        ),
+    )
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parent
@@ -342,40 +429,44 @@ def main() -> None:
     client = FabricClient(args.workspace_id)
 
     lakehouse = client.create_lakehouse(args.lakehouse_name)
-    client.ensure_directory(lakehouse["id"], "Files/raw")
-    for table_name in TABLE_FIELDS:
-        source = data_dir / f"{table_name}.csv"
-        client.upload_file(lakehouse["id"], f"Files/raw/{source.name}", source.read_bytes())
-    client.upload_file(
-        lakehouse["id"],
-        "Files/raw/quality_report.json",
-        (data_dir / "quality_report.json").read_bytes(),
-    )
-
-    notebook = client.upsert_item(
-        args.notebook_name,
-        "Notebook",
-        "Loads synthetic SAS finance CSV data into managed Delta tables.",
-        notebook_definition(
-            root / "fabric" / "load_finance_tables.py",
-            args.workspace_id,
-            lakehouse["id"],
-            args.lakehouse_name,
-        ),
-    )
+    notebook = client.find_item(args.notebook_name, "Notebook")
     notebook_run = None
     table_validation: dict[str, int] = {}
-    if not args.skip_notebook_run:
-        notebook_run = client.run_notebook(notebook["id"], lakehouse["id"])
-        table_validation = {
-            table_name: client.validate_delta_table(lakehouse["id"], table_name)
-            for table_name in TABLE_FIELDS
-        }
+    if not args.semantic_only:
+        client.ensure_directory(lakehouse["id"], "Files/raw")
+        for table_name in TABLE_FIELDS:
+            source = data_dir / f"{table_name}.csv"
+            client.upload_file(
+                lakehouse["id"],
+                f"Files/raw/{source.name}",
+                source.read_bytes(),
+            )
+        client.upload_file(
+            lakehouse["id"],
+            "Files/raw/quality_report.json",
+            (data_dir / "quality_report.json").read_bytes(),
+        )
+
+        notebook = client.upsert_item(
+            args.notebook_name,
+            "Notebook",
+            "Loads synthetic SAS finance CSV data into managed Delta tables.",
+            notebook_definition(
+                root / "fabric" / "load_finance_tables.py",
+                args.workspace_id,
+                lakehouse["id"],
+                args.lakehouse_name,
+            ),
+        )
+        if not args.skip_notebook_run:
+            notebook_run = client.run_notebook(notebook["id"], lakehouse["id"])
+            table_validation = {
+                table_name: client.validate_delta_table(lakehouse["id"], table_name)
+                for table_name in TABLE_FIELDS
+            }
 
     ontology_asset = build_ontology(args.workspace_id, lakehouse["id"])
-    data_agent_asset = build_data_agent(args.workspace_id, lakehouse["id"], args.lakehouse_name)
     write_asset_tree(ontology_asset, root / "generated" / "ontology")
-    write_asset_tree(data_agent_asset, root / "generated" / "data-agent")
 
     ontology = client.upsert_item(
         args.ontology_name,
@@ -384,6 +475,19 @@ def main() -> None:
         client._public_definition(ontology_asset),
         create_collection="ontologies",
     )
+    ontology_definition = client._public_definition(ontology_asset)
+    graph_validation = client.wait_for_ontology_graph(
+        ontology["id"],
+        ontology_definition,
+    )
+    data_agent_asset = build_data_agent(
+        args.workspace_id,
+        lakehouse["id"],
+        args.lakehouse_name,
+        ontology["id"],
+        args.ontology_name,
+    )
+    write_asset_tree(data_agent_asset, root / "generated" / "data-agent")
     data_agent = client.upsert_item(
         args.data_agent_name,
         "DataAgent",
@@ -398,7 +502,14 @@ def main() -> None:
         "notebook": notebook,
         "notebook_run": notebook_run,
         "ontology": ontology,
+        "ontology_graph": graph_validation,
         "data_agent": data_agent,
+        "ontology_natural_language": {
+            "enabled": True,
+            "ontology_source_id": ontology["id"],
+            "selected_entities": len(ENTITY_NAMES),
+            "gql_group_by_instruction": True,
+        },
         "quality": quality,
         "delta_table_files": table_validation,
         "ontology_mcp_endpoint": (

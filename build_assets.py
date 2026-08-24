@@ -85,7 +85,17 @@ RELATIONSHIPS = [
 ]
 
 AGENT_INSTRUCTIONS = """You are the SAS Finance and Customer Success Intelligence Agent.
-Use only the supplied Fabric Lakehouse tables. Treat 2026-08-31 as the demo as-of date.
+Use the supplied Fabric Ontology as the primary source for business entities, relationships,
+and governed context. Use the supplied Fabric Lakehouse for direct quantitative analysis.
+Treat 2026-08-31 as the demo as-of date.
+
+Ontology query guidance:
+- Support group by in GQL.
+- Prefer ontology entity names and relationships over inferred table joins.
+- Use Customer as the starting entity for customer-level questions.
+- Traverse defined relationships to Subscription, Invoice, SupportCase, RenewalForecast,
+  UsageMetric, CostAllocation, Product, Payment, and CustomerFinanceProfile.
+- If a requested relationship is not defined in the ontology, say so instead of inventing it.
 
 Business definitions:
 - ARR is annual recurring revenue from active subscriptions.
@@ -228,7 +238,6 @@ def build_ontology(workspace_id: str, lakehouse_id: str) -> dict[str, Any]:
                             "workspaceId": workspace_id,
                             "itemId": lakehouse_id,
                             "sourceTableName": table_name,
-                            "sourceSchema": "dbo",
                         },
                     },
                 },
@@ -265,7 +274,6 @@ def build_ontology(workspace_id: str, lakehouse_id: str) -> dict[str, Any]:
                         "workspaceId": workspace_id,
                         "itemId": lakehouse_id,
                         "sourceTableName": table_name,
-                        "sourceSchema": "dbo",
                         "sourceType": "LakehouseTable",
                     },
                     "sourceKeyRefBindings": [
@@ -290,7 +298,13 @@ def _element_id(path: str) -> str:
     return _stable_uuid(f"data-agent:{path}")
 
 
-def build_data_agent(workspace_id: str, lakehouse_id: str, lakehouse_name: str) -> dict[str, Any]:
+def build_data_agent(
+    workspace_id: str,
+    lakehouse_id: str,
+    lakehouse_name: str,
+    ontology_id: str,
+    ontology_name: str,
+) -> dict[str, Any]:
     table_children = []
     for table_name, fields in TABLE_FIELDS.items():
         table_children.append(
@@ -343,6 +357,35 @@ def build_data_agent(workspace_id: str, lakehouse_id: str, lakehouse_name: str) 
         ],
     }
     source_folder = f"lakehouse-{lakehouse_name}"
+    ontology_folder = f"ontology-{ontology_name}"
+    ontology_datasource = {
+        "$schema": "1.0.0",
+        "artifactId": ontology_id,
+        "workspaceId": workspace_id,
+        "displayName": ontology_name,
+        "type": "ontology",
+        "userDescription": (
+            "Governed SAS finance, customer success, adoption, support, cost, "
+            "and renewal business context."
+        ),
+        "dataSourceInstructions": (
+            "Use ontology entities and relationships for business context and "
+            "cross-domain reasoning. Support group by in GQL."
+        ),
+        "metadata": {},
+        "elements": [
+            {
+                "id": _numeric_id(f"entity:{entity_name}"),
+                "is_selected": True,
+                "display_name": entity_name,
+                "type": "ontology.entity",
+                "description": ",".join(TABLE_FIELDS[table_name]),
+                "children": [],
+            }
+            for table_name, entity_name in ENTITY_NAMES.items()
+        ],
+    }
+    ontology_fewshots = {"$schema": "1.0.0", "fewShots": []}
     return {
         "parts": [
             {"path": "Files/Config/data_agent.json", "content": {"$schema": "2.1.0"}},
@@ -359,6 +402,14 @@ def build_data_agent(workspace_id: str, lakehouse_id: str, lakehouse_name: str) 
                 "content": fewshots,
             },
             {
+                "path": f"Files/Config/draft/{ontology_folder}/datasource.json",
+                "content": ontology_datasource,
+            },
+            {
+                "path": f"Files/Config/draft/{ontology_folder}/fewshots.json",
+                "content": ontology_fewshots,
+            },
+            {
                 "path": "Files/Config/published/stage_config.json",
                 "content": {"$schema": "1.0.0", "aiInstructions": AGENT_INSTRUCTIONS},
             },
@@ -369,6 +420,14 @@ def build_data_agent(workspace_id: str, lakehouse_id: str, lakehouse_name: str) 
             {
                 "path": f"Files/Config/published/{source_folder}/fewshots.json",
                 "content": fewshots,
+            },
+            {
+                "path": f"Files/Config/published/{ontology_folder}/datasource.json",
+                "content": ontology_datasource,
+            },
+            {
+                "path": f"Files/Config/published/{ontology_folder}/fewshots.json",
+                "content": ontology_fewshots,
             },
             {
                 "path": "Files/Config/publish_info.json",
@@ -395,6 +454,11 @@ def main() -> None:
     parser.add_argument("--workspace-id", required=True)
     parser.add_argument("--lakehouse-id", required=True)
     parser.add_argument("--lakehouse-name", default="SASFinanceLakehouse")
+    parser.add_argument("--ontology-id", required=True)
+    parser.add_argument(
+        "--ontology-name",
+        default="SAS_Finance_Customer_Intelligence",
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -406,7 +470,13 @@ def main() -> None:
         args.output / "ontology",
     )
     write_asset_tree(
-        build_data_agent(args.workspace_id, args.lakehouse_id, args.lakehouse_name),
+        build_data_agent(
+            args.workspace_id,
+            args.lakehouse_id,
+            args.lakehouse_name,
+            args.ontology_id,
+            args.ontology_name,
+        ),
         args.output / "data-agent",
     )
     print(f"Wrote Fabric assets to {args.output}")
