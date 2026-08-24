@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+import base64
+import json
 import unittest
 from pathlib import Path
 
@@ -9,6 +11,7 @@ DEMO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(DEMO_ROOT))
 
 from build_assets import build_data_agent, build_ontology  # noqa: E402
+from deploy import notebook_definition  # noqa: E402
 
 
 WORKSPACE_ID = "11111111-1111-1111-1111-111111111111"
@@ -63,6 +66,29 @@ class FabricAssetTests(unittest.TestCase):
         )
         self.assertEqual(datasource["artifactId"], LAKEHOUSE_ID)
         self.assertEqual(len(datasource["elements"][0]["children"]), 10)
+
+    def test_notebook_persists_default_lakehouse(self) -> None:
+        definition = notebook_definition(
+            DEMO_ROOT / "fabric" / "load_finance_tables.py",
+            WORKSPACE_ID,
+            LAKEHOUSE_ID,
+            "SASFinanceLakehouse",
+        )
+        content = json.loads(
+            base64.b64decode(definition["parts"][0]["payload"]).decode("utf-8")
+        )
+
+        self.assertEqual(
+            content["metadata"]["trident"]["lakehouse"]["default_lakehouse"],
+            LAKEHOUSE_ID,
+        )
+        self.assertEqual(
+            content["metadata"]["trident"]["lakehouse"]["default_lakehouse_workspace_id"],
+            WORKSPACE_ID,
+        )
+        configure = "".join(content["cells"][0]["source"])
+        self.assertTrue(configure.startswith("%%configure -f\n"))
+        self.assertIn(LAKEHOUSE_ID, configure)
 
 
 if __name__ == "__main__":

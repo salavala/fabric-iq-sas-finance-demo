@@ -272,12 +272,43 @@ class FabricClient:
         return len(paths)
 
 
-def notebook_definition(source_path: Path) -> dict[str, Any]:
+def notebook_definition(
+    source_path: Path,
+    workspace_id: str,
+    lakehouse_id: str,
+    lakehouse_name: str,
+) -> dict[str, Any]:
     source = source_path.read_text(encoding="utf-8")
+    lakehouse = {
+        "default_lakehouse": lakehouse_id,
+        "default_lakehouse_name": lakehouse_name,
+        "default_lakehouse_workspace_id": workspace_id,
+    }
+    configure_cell = (
+        "%%configure -f\n"
+        + json.dumps(
+            {
+                "defaultLakehouse": {
+                    "name": lakehouse_name,
+                    "id": lakehouse_id,
+                    "workspaceId": workspace_id,
+                }
+            },
+            indent=2,
+        )
+        + "\n"
+    )
     notebook = {
         "nbformat": 4,
         "nbformat_minor": 5,
         "cells": [
+            {
+                "cell_type": "code",
+                "source": configure_cell.splitlines(keepends=True),
+                "execution_count": None,
+                "outputs": [],
+                "metadata": {},
+            },
             {
                 "cell_type": "code",
                 "source": [line + "\n" for line in source.splitlines()],
@@ -293,6 +324,7 @@ def notebook_definition(source_path: Path) -> dict[str, Any]:
                 "display_name": "Synapse PySpark",
                 "language": "Python",
             },
+            "trident": {"lakehouse": lakehouse},
         },
     }
     payload = base64.b64encode(json.dumps(notebook).encode("utf-8")).decode("ascii")
@@ -339,7 +371,12 @@ def main() -> None:
         args.notebook_name,
         "Notebook",
         "Loads synthetic SAS finance CSV data into managed Delta tables.",
-        notebook_definition(root / "fabric" / "load_finance_tables.py"),
+        notebook_definition(
+            root / "fabric" / "load_finance_tables.py",
+            args.workspace_id,
+            lakehouse["id"],
+            args.lakehouse_name,
+        ),
     )
     notebook_run = None
     table_validation: dict[str, int] = {}
