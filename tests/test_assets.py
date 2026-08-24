@@ -86,9 +86,12 @@ class FabricAssetTests(unittest.TestCase):
             content["metadata"]["trident"]["lakehouse"]["default_lakehouse_workspace_id"],
             WORKSPACE_ID,
         )
-        configure = "".join(content["cells"][0]["source"])
-        self.assertTrue(configure.startswith("%%configure -f\n"))
-        self.assertIn(LAKEHOUSE_ID, configure)
+        source = "".join(content["cells"][0]["source"])
+        self.assertIn(
+            f"abfss://{WORKSPACE_ID}@onelake.dfs.fabric.microsoft.com/{LAKEHOUSE_ID}",
+            source,
+        )
+        self.assertNotIn("__LAKEHOUSE_ROOT__", source)
 
 
 if __name__ == "__main__":

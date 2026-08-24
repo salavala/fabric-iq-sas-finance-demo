@@ -278,37 +278,22 @@ def notebook_definition(
     lakehouse_id: str,
     lakehouse_name: str,
 ) -> dict[str, Any]:
-    source = source_path.read_text(encoding="utf-8")
+    lakehouse_root = (
+        f"abfss://{workspace_id}@onelake.dfs.fabric.microsoft.com/{lakehouse_id}"
+    )
+    source = source_path.read_text(encoding="utf-8").replace(
+        "__LAKEHOUSE_ROOT__",
+        lakehouse_root,
+    )
     lakehouse = {
         "default_lakehouse": lakehouse_id,
         "default_lakehouse_name": lakehouse_name,
         "default_lakehouse_workspace_id": workspace_id,
     }
-    configure_cell = (
-        "%%configure -f\n"
-        + json.dumps(
-            {
-                "defaultLakehouse": {
-                    "name": lakehouse_name,
-                    "id": lakehouse_id,
-                    "workspaceId": workspace_id,
-                }
-            },
-            indent=2,
-        )
-        + "\n"
-    )
     notebook = {
         "nbformat": 4,
         "nbformat_minor": 5,
         "cells": [
-            {
-                "cell_type": "code",
-                "source": configure_cell.splitlines(keepends=True),
-                "execution_count": None,
-                "outputs": [],
-                "metadata": {},
-            },
             {
                 "cell_type": "code",
                 "source": [line + "\n" for line in source.splitlines()],

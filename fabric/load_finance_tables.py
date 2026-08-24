@@ -11,6 +11,8 @@
 
 from pyspark.sql import functions as F
 
+lakehouse_root = "__LAKEHOUSE_ROOT__"
+
 table_names = [
     "customers",
     "products",
@@ -42,7 +44,7 @@ for table_name in table_names:
     frame = (
         spark.read.option("header", True)
         .option("nullValue", "")
-        .csv(f"Files/raw/{table_name}.csv")
+        .csv(f"{lakehouse_root}/Files/raw/{table_name}.csv")
     )
     for column in frame.columns:
         if column in double_columns:
@@ -55,7 +57,7 @@ for table_name in table_names:
         frame.write.mode("overwrite")
         .option("overwriteSchema", "true")
         .format("delta")
-        .saveAsTable(table_name)
+        .save(f"{lakehouse_root}/Tables/{table_name}")
     )
     results.append({"table": table_name, "rows": frame.count()})
 
